@@ -59,7 +59,10 @@ const TextToSpeechButton = forwardRef((props: TextToSpeechButtonProps, ref) => {
         audioRef.current.src = url;
         setAudioUrl(url);
         setLastIdentifier(currentIdentifier);
-
+        audioRef.current.onplay = () => {
+          setIsPlaying(true);
+          onAudioPlay(true);
+        };
         audioRef.current.onloadeddata = () => {
           audioRef.current.play();
           setIsPlaying(true);

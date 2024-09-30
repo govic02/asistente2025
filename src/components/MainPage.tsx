@@ -66,7 +66,11 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isFirstMessage, setIsFirstMessage] = useState(true);
   const [isProcessingFirstChunk, setIsProcessingFirstChunk] = useState(true);
+  const [isResponseEnded, setIsResponseEnded] = useState(false);
+  const [responseComplete, setResponseComplete] = useState(false);
   const firstChunkRef = useRef('');
+  const [lastMessageId, setLastMessageId] = useState<number | null>(null);
+  
   useEffect(() => {
     if (nombre) {
       console.log("Nombre recibido en MainPage:", nombre);
@@ -362,37 +366,63 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
     setShowScrollButton(false);
     clearInputArea();
     setMessages([]);
+    setLoading(false);
+    setLastMessageId(null); // Reiniciar lastMessageId
+    setResponseComplete(false); // Reiniciar responseComplete
     messageBoxRef.current?.focusTextarea();
   };
 
   const handleSelectedConversation = (id: string | null) => {
     if (id && id.length > 0) {
       let n = Number(id);
+  
+      setLoading(true);
+  
       ConversationService.getConversationById(n)
         .then((conversation) => {
           if (conversation) {
             setConversation(conversation);
             clearInputArea();
-            ConversationService.getChatMessages(conversation).then((messages: ChatMessage[]) => {
-              if (messages.length == 0) {
-                console.warn('possible state problem');
-              } else {
-                setMessages(messages);
-              }
-            });
+  
+            ConversationService.getChatMessages(conversation)
+              .then((messages: ChatMessage[]) => {
+                if (messages.length === 0) {
+                  console.warn('Possible state problem');
+                } else {
+                  setMessages(messages);
+  
+                  // Reiniciar lastMessageId y responseComplete
+                  setLastMessageId(null);
+                  setResponseComplete(false);
+                }
+  
+                setLoading(false);
+              })
+              .catch((error) => {
+                console.error('Error al obtener los mensajes:', error);
+                setLoading(false);
+              });
           } else {
             const errorMessage = 'Conversation ' + location.pathname + ' not found';
             NotificationService.handleError(errorMessage, CONVERSATION_NOT_FOUND);
             navigate('/');
+            setLoading(false);
           }
+        })
+        .catch((error) => {
+          console.error('Error al obtener la conversación:', error);
+          setLoading(false);
         });
     } else {
       newConversation();
+      setLoading(false);
     }
     setAllowAutoScroll(true);
     setShowScrollButton(false);
     messageBoxRef.current?.focusTextarea();
   };
+  
+  
 
   function getTitle(message: string): string {
     let title = message.trimStart();
@@ -454,33 +484,24 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
     messageType: MessageType,
     message: string,
     fileDataRef: FileDataRef[],
-    callback?: (callback: ChatMessage[]) => void
+    callback?: (updatedMessages: ChatMessage[]) => void
   ) => {
-    let content: string = message;
-
-    setMessages((prevMessages: ChatMessage[]) => {
-      const message: ChatMessage = {
-        id: prevMessages.length + 1,
-        role: role,
-        messageType: messageType,
-        content: content,
-        fileDataRef: fileDataRef,
-      };
-      return [...prevMessages, message];
-    });
-
     const newMessage: ChatMessage = {
       id: messages.length + 1,
       role: role,
       messageType: messageType,
-      content: content,
+      content: message,
       fileDataRef: fileDataRef,
     };
-    const updatedMessages = [...messages, newMessage];
+  
+    setMessages((prevMessages: ChatMessage[]) => [...prevMessages, newMessage]);
+  
     if (callback) {
-      callback(updatedMessages);
+      // Pasar solo el nuevo mensaje al callback
+      callback([newMessage]);
     }
   };
+  
 
   function getEffectiveChatSettings(): ChatSettings {
     let effectiveSettings = chatSettings;
@@ -496,8 +517,12 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
   }
 
   function sendMessage(updatedMessages: ChatMessage[]) {
+    // Reiniciar la bandera al iniciar una nueva solicitud
+    setIsResponseEnded(false);
+    setResponseComplete(false);
     setLoading(true);
     clearInputArea();
+  
     let systemPrompt = getFirstValidString(
       conversation?.systemPrompt,
       chatSettings?.instructions,
@@ -505,17 +530,25 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
       OPENAI_DEFAULT_SYSTEM_PROMPT,
       DEFAULT_INSTRUCTIONS
     );
-    let messages: ChatMessage[] = [
+  
+    // Solo incluir el prompt del sistema y el último mensaje del usuario
+    let messagesToSend: ChatMessage[] = [
       {
         role: Role.System,
         content: systemPrompt,
       } as ChatMessage,
-      ...updatedMessages,
+      updatedMessages[updatedMessages.length - 1],
     ];
-
+  
     let effectiveSettings = getEffectiveChatSettings();
-
-    ChatService.sendMessageStreamed(effectiveSettings, messages, handleStreamedResponse,nombre,isFirstMessage)
+  
+    ChatService.sendMessageStreamed(
+      effectiveSettings,
+      messagesToSend,
+      handleStreamedResponse,
+      nombre,
+      isFirstMessage
+    )
       .then((response: ChatCompletion) => {
         // nop
       })
@@ -525,7 +558,7 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
           setLoading(false);
           addMessage(Role.Assistant, MessageType.Error, message, []);
         } else {
-          NotificationService.handleUnexpectedError(err, 'Failed to send message to openai.');
+          NotificationService.handleUnexpectedError(err, 'Failed to send message to OpenAI.');
         }
       })
       .finally(() => {
@@ -533,52 +566,67 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
         setIsFirstMessage(false);
       });
   }
+  
 
-  function handleStreamedResponse(content: string, fileDataRef: FileDataRef[], isEnd?: boolean,isFirst?: boolean) {
+  function handleStreamedResponse(
+    content: string,
+    fileDataRef: FileDataRef[],
+    isEnd?: boolean,
+    isFirst?: boolean
+  ) {
     if (isEnd) {
-      console.log('Respuesta completa recibida');
-      setLoading(false);
-      // Aquí puedes añadir cualquier lógica adicional para manejar el final de la respuesta
+      if (!isResponseEnded) {
+        console.log('Respuesta completa recibida');
+        setLoading(false);
+        setIsResponseEnded(true);
+        setResponseComplete(true); // Indicar que la respuesta ha sido completada
+  
+        // Actualizar lastMessageId al ID del último mensaje
+        // Obtener el último mensaje del asistente
+        const lastMessage = messages[messages.length - 1];
+        if (lastMessage.role === Role.Assistant) {
+          setLastMessageId(lastMessage.id);
+        }
+      }
       return;
     }
+
     setMessages((prevMessages) => {
       console.log('Fragmento de respuesta recibido:', content);
-  
+
       if (prevMessages.length === 0) {
         console.error('prevMessages should not be empty in handleStreamedResponse.');
         return [];
       }
-  
+
       const lastMessage = prevMessages[prevMessages.length - 1];
-      
+
       if (lastMessage.role === Role.User) {
         // Si el último mensaje es del usuario, creamos un nuevo mensaje del asistente
-        return [...prevMessages, {
-          id: prevMessages.length + 1,
-          role: Role.Assistant,
-          messageType: MessageType.Normal,
-          content: content,
-          fileDataRef: fileDataRef
-        }];
+        return [
+          ...prevMessages,
+          {
+            id: prevMessages.length + 1,
+            role: Role.Assistant,
+            messageType: MessageType.Normal,
+            content: content,
+            fileDataRef: fileDataRef,
+            isNew: true,
+          },
+        ];
       } else if (lastMessage.role === Role.Assistant) {
         // Si el último mensaje es del asistente, añadimos el nuevo contenido
         const updatedLastMessage = {
           ...lastMessage,
-          content: lastMessage.content + content
+          content: lastMessage.content + content,
         };
         return [...prevMessages.slice(0, -1), updatedLastMessage];
       }
-  
+
       // Si llegamos aquí, algo inesperado ha ocurrido
       console.error('Unexpected message state in handleStreamedResponse');
       return prevMessages;
     });
-  
-    // Verificar si este es el último fragmento de la respuesta
-    if (isLastPartOfResponse(content)) {
-      console.log('Respuesta completa recibida');
-      // Aquí puedes añadir cualquier lógica adicional para manejar el final de la respuesta
-    }
   }
   
   function isLastPartOfResponse(content: string): boolean {
@@ -701,7 +749,8 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
             allowAutoScroll={allowAutoScroll}
             loading={loading}
             onAudioPlay={handleAudioPlay}
-            responseComplete={!loading && messages.length > 0 && messages[messages.length - 1].role === Role.Assistant}
+            responseComplete={responseComplete}
+           
           />
           {showScrollButton && (
             <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 mb-10 z-10">
@@ -709,16 +758,18 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
             </div>
           )}
          
-          <MessageBox
-            ref={messageBoxRef}
-            callApp={callApp}
-            loading={loading}
-            setLoading={setLoading}
-            allowImageAttachment={model === null || model?.image_support || false ? 'yes' : (!conversation ? 'warn' : 'no')}
-          />
-          <div className="absolute left-0 top-1/2 transform -translate-y-1/2 z-50 w-80 h-80 ">
-            <VideoPlayer isAudioPlaying={isAudioPlaying} />
-          </div>
+         <div className="flex items-center" style={{ marginLeft: '70px' }}>
+  <MessageBox
+    ref={messageBoxRef}
+    callApp={callApp}
+    loading={loading}
+    setLoading={setLoading}
+    allowImageAttachment={model === null || model?.image_support || false ? 'yes' : (!conversation ? 'warn' : 'no')}
+  />
+</div>
+       <div className="absolute bottom-0 left-0 z-50 w-30 h-30">
+  <VideoPlayer isAudioPlaying={isAudioPlaying} />
+</div>
 
           <div className="absolute bottom-0 right-0 m-4">
             <button

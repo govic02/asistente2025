@@ -32,7 +32,9 @@ const Sidebar: React.FC<SidebarProps> = ({className, isSidebarCollapsed, toggleS
   }
 
   return (
-    <div className={`${className} ${isSidebarCollapsed ? 'w-0' : 'w-auto'}`}>
+    <div
+  className={`${className} ${isSidebarCollapsed ? 'w-0' : 'fixed top-0 left-0 w-full h-full z-50'}`}
+>
       {isSidebarCollapsed && (
         <div className="absolute top-0 left-0 z-50">
           <Tooltip title={t('open-sidebar')} side="right" sideOffset={10}>

@@ -68,7 +68,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isAudioPlaying }) => {
     };
   }, [isAudioPlaying]);
 
-  return <video ref={videoRef} width="150" height="100" controls />;
+  return <video ref={videoRef} width="70" height="40" controls />;
 };
 
 export default VideoPlayer;
