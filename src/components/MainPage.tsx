@@ -124,7 +124,7 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
     console.log("[send data]", (new Date()).toLocaleTimeString());
 
     try {
-      const url = 'http://localhost:5000/transcribe';
+      const url = 'http://localhost:4001/transcribe';
       const response = await fetch(url, {
         method: 'POST',
         headers: {

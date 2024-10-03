@@ -67,8 +67,8 @@
   },
   "scripts": {
     "build:css": "postcss src/index.css -o src/tailwind.css",
-    "start": "npm run build:css && vite",
-    "build": "npm run build:css && tsc && vite build",
+    "start": "PORT=4000 npm run build:css && vite",
+    "build": "PORT=4000 npm run build:css && tsc && vite build",
     "serve": "vite preview",
     "dev": "npm run build:css && vite"
   },

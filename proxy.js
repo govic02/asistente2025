@@ -9,7 +9,7 @@ import ffmpegPath from 'ffmpeg-static'; // Importa la ruta de ffmpeg desde ffmpe
 import FormData from 'form-data';
 
 const app = express();
-const PORT = 4000;
+const PORT = 4001;
 
 app.use(cors());
 app.use(express.json());
