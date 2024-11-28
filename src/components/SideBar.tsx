@@ -33,7 +33,7 @@ const Sidebar: React.FC<SidebarProps> = ({className, isSidebarCollapsed, toggleS
 
   return (
     <div
-  className={`${className} ${isSidebarCollapsed ? 'w-0' : 'fixed top-0 left-0 w-full h-full z-50'}`}
+  className={`${className} ${isSidebarCollapsed ? 'w-0' : 'w-0'}`}
 >
       {isSidebarCollapsed && (
         <div className="absolute top-0 left-0 z-50">
@@ -42,7 +42,7 @@ const Sidebar: React.FC<SidebarProps> = ({className, isSidebarCollapsed, toggleS
               className="flex px-3 min-h-[44px] py-1 gap-3 transition-colors duration-200 dark:text-white
               cursor-pointer text-sm rounded-md border dark:border-white/20 hover:bg-gray-300 dark:hover:bg-gray-600
               h-11 w-11 flex-shrink-0 items-center justify-center bg-white dark:bg-transparent"
-              onClick={toggleSidebarCollapse}>
+              >
               <OpenSideBarIcon/>
             </button>
           </Tooltip>

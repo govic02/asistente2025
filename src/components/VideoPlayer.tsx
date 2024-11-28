@@ -16,7 +16,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isAudioPlaying }) => {
     videoElement.pause();
 
     // Determinar el video a cargar según el estado de reproducción del audio
-    const videoSource = isAudioPlaying ? '/02.mp4' : '/01.mp4';
+    const videoSource = isAudioPlaying ? '/talk2.mp4' : '/idle.mp4';
 
     // Cambiar la fuente del video
     videoElement.src = videoSource;
@@ -68,7 +68,16 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isAudioPlaying }) => {
     };
   }, [isAudioPlaying]);
 
-  return <video ref={videoRef} width="200" height="300" controls />;
+  return  <video
+  ref={videoRef}
+  width="180"
+  height="250"
+  controls
+  style={{
+    borderRadius: '30px',
+    overflow: 'hidden',
+  }}
+/>;
 };
 
 export default VideoPlayer;

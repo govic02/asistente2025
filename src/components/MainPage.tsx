@@ -21,6 +21,7 @@ import { FileDataRef } from '../models/FileData';
 import { OpenAIModel } from '../models/model';
 import { ArrowUturnDownIcon, MicrophoneIcon, StopIcon } from '@heroicons/react/24/outline';
 import VideoPlayer from './VideoPlayer';
+import { useNombreCurso } from "../service/useNombreCurso";
 
 import classes from './mainPage.module.css';
 
@@ -35,12 +36,12 @@ function getFirstValidString(...args: (string | undefined | null)[]): string {
 
 interface MainPageProps {
   className: string;
-  isSidebarCollapsed: boolean;
+  isSidebarCollapsed: true;
   toggleSidebarCollapse: () => void;
   nombre?: string | null;
+  curso?: string | null; // Nuevo prop para el curso
 }
-
-const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, toggleSidebarCollapse , nombre}) => {
+const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, toggleSidebarCollapse , nombre,curso}) => {
   const { userSettings } = useContext(UserContext);
   const { t } = useTranslation();
   const [chatSettings, setChatSettings] = useState<ChatSettings | undefined>(undefined);
@@ -70,7 +71,7 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
   const [responseComplete, setResponseComplete] = useState(false);
   const firstChunkRef = useRef('');
   const [lastMessageId, setLastMessageId] = useState<number | null>(null);
-  
+
   useEffect(() => {
     if (nombre) {
       console.log("Nombre recibido en MainPage:", nombre);
@@ -124,7 +125,7 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
     console.log("[send data]", (new Date()).toLocaleTimeString());
 
     try {
-      const url = 'http://localhost:4001/transcribe';
+      const url = 'http://localhost:5000/transcribe';
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -522,7 +523,10 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
     setResponseComplete(false);
     setLoading(true);
     clearInputArea();
-  
+    if (!updatedMessages || updatedMessages.length === 0) {
+      console.error('No hay mensajes de usuario para enviar.');
+      return;
+    }
     let systemPrompt = getFirstValidString(
       conversation?.systemPrompt,
       chatSettings?.instructions,
@@ -537,7 +541,7 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
         role: Role.System,
         content: systemPrompt,
       } as ChatMessage,
-      updatedMessages[updatedMessages.length - 1],
+      ...updatedMessages, 
     ];
   
     let effectiveSettings = getEffectiveChatSettings();
@@ -547,6 +551,7 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
       messagesToSend,
       handleStreamedResponse,
       nombre,
+      curso,
       isFirstMessage
     )
       .then((response: ChatCompletion) => {

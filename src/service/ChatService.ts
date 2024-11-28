@@ -8,7 +8,7 @@ import { ChatSettings } from "../models/ChatSettings";
 import { CHAT_STREAM_DEBOUNCE_TIME, DEFAULT_MODEL } from "../constants/appConstants";
 import { NotificationService } from '../service/NotificationService';
 import { FileDataRef } from "../models/FileData";
-
+import chatSettingsData from './chatSettingsData.json';
 interface CompletionChunk {
   id: string;
   object: string;
@@ -34,14 +34,14 @@ export class ChatService {
 
   // Función para cargar la base de conocimientos desde un array embebido
   static async loadKnowledgeBase() {
-    console.log("Cargando base de conocimientos desde JSON...");
+   // console.log("Cargando base de conocimientos desde JSON...");
     // Puedes eliminar esta parte si ya no necesitas cargar la base de conocimientos local
   }
 
   static async getPineconeIndexCount(): Promise<number> {
     try {
       const response = await axios.get(
-        `http://localhost:4001/pinecone-api/index/stats`,
+        `http://localhost:5000/pinecone-api/index/stats`,
         {
           headers: {
             'Content-Type': 'application/json',
@@ -62,10 +62,10 @@ export class ChatService {
     try {
      // console.log("embedin consultado", queryEmbedding);
       const totalElements = await this.getPineconeIndexCount();
-      console.log(`El índice de Pinecone contiene ${totalElements} elementos.`);
+      //console.log(`El índice de Pinecone contiene ${totalElements} elementos.`);
     
       const response = await axios.post(
-        `http://localhost:4001/pinecone-api/query`,
+        `http://localhost:5000/pinecone-api/query`,
         {
           vector: queryEmbedding, // O asegúrate de usar el campo correcto esperado por Pinecone
           topK: 10,  // Número de resultados que quieres obtener
@@ -106,7 +106,7 @@ export class ChatService {
     }
 
     const data = await response.json();
-   // console.log('Embeddings generados:', data.data.map((item: any) => item.embedding));
+  //  console.log('Embeddings generados:', data.data.map((item: any) => item.embedding));
     return data.data.map((item: any) => item.embedding);
   }
 
@@ -151,7 +151,7 @@ export class ChatService {
           }
         });
   
-       // console.log("Message with image:", { role: message.role, content: contentParts });
+      //  console.log("Message with image:", { role: message.role, content: contentParts });
         return { role: message.role, content: contentParts };
       }
   
@@ -168,10 +168,10 @@ export class ChatService {
 
   // Función para enviar mensajes y buscar en la base de conocimientos
   static async sendMessage(messages: ChatMessage[], modelId: string): Promise<ChatCompletion> {
-    console.log('sendMessage function called');  // Log para verificar que la función se llama correctamente
+   // console.log('sendMessage function called');  // Log para verificar que la función se llama correctamente
 
     const userQuery = messages.map(m => m.content).join(' ');
-   // console.log('User query:', userQuery);  // Log para verificar la consulta del usuario
+  //  console.log('User query:', userQuery);  // Log para verificar la consulta del usuario
 
      //Generar embeddings para la consulta del usuario
     const queryEmbedding = await this.generateEmbeddings([userQuery]);
@@ -185,14 +185,14 @@ export class ChatService {
 
     if (pineconeResults.length > 0 && pineconeResults[0].score > 0.7) { // Umbral de similitud
         const bestMatch = pineconeResults[0].metadata.text;
-       // console.log('Using knowledge base from Pinecone');  // Log para verificar que se está usando Pinecone
+  //      console.log('Using knowledge base from Pinecone');  // Log para verificar que se está usando Pinecone
         responseMessage = {
             role: Role.Assistant,
             messageType: MessageType.Normal,
             content: `${bestMatch}\n\n(used knowledge base from Pinecone)`,
         };
     } else {
-     //   console.log('Using general knowledge base');  // Log para verificar que se está usando el modelo de OpenAI
+      //  console.log('Using general knowledge base');  // Log para verificar que se está usando el modelo de OpenAI
         const mappedMessages = await this.mapChatMessagesToCompletionMessages(modelId, messages);
 
         const requestBody: ChatCompletionRequest = {
@@ -223,7 +223,7 @@ export class ChatService {
         };
     }
 
-    //console.log('Final response:', responseMessage.content);  // Log para verificar la respuesta final
+ //   console.log('Final response:', responseMessage.content);  // Log para verificar la respuesta final
 
     const chatCompletion: ChatCompletion = {
         id: 'unique-id',
@@ -271,329 +271,258 @@ export class ChatService {
     };
   }
 
+
   static async sendMessageStreamed(
     chatSettings: ChatSettings,
     messages: ChatMessage[],
     callback: (content: string, fileDataRef?: FileDataRef[], isEnd?: boolean, isFirst?: boolean) => void,
     nombre: string | null,
+    curso: string | null,
     isFirstMessage: boolean
   ): Promise<any> {
-    // Declarar la bandera para controlar el fin de la respuesta
     let isEndCalled = false;
-    //console.log("Nombre recibido en sendMessageStreamed:", nombre);
+   // console.log("Nombre recibido en sendMessageStreamed:", nombre);
+   // console.log("Curso recibido en sendMessageStreamed:", curso);
   
-    if (nombre) {
-      let systemMessage: string;
-      if (isFirstMessage) {
-        systemMessage = `El nombre del usuario es ${nombre}. Saluda al usuario por su nombre en tu primera respuesta. En los mensajes siguientes, refierete al usuario por su nombre solo cuando sea apropiado, sin forzar su uso en cada mensaje y respondiendo la última pregunta hecha solamente.`;
-      } else {
-        systemMessage = `El nombre del usuario es ${nombre}. Refierete al usuario por su nombre solo cuando sea apropiado en el contexto de la conversación, sin forzar su uso en cada mensaje y no saludes.Responde la última pregunta hecha solamente`;
-      }
+    // Normalizar el nombre del curso
+    const normalizeCursoName = (cursoName: string | null): string | null => {
+      if (!cursoName) return null;
+      return decodeURIComponent(cursoName)
+        .trim()
+        .replace(/%/g, "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+    };
   
-      messages.unshift({
-        role: Role.System,
-        content: systemMessage,
-        messageType: MessageType.Normal,
-      });
+    const normalizedCurso = normalizeCursoName(curso);
+  //  console.log("Curso normalizado:", normalizedCurso);
+  
+    // Buscar la configuración del curso
+    const courseSettings = chatSettingsData.find((setting: any) =>
+      normalizeCursoName(setting.name) === normalizedCurso
+    );
+   // console.log("Configuración del curso encontrada:", courseSettings);
+  
+    let systemMessage: string;
+  
+    if (courseSettings) {
+      systemMessage = isFirstMessage
+        ? `El nombre del usuario es ${nombre}. Este es el asistente de la asignatura "${courseSettings.name}". ${courseSettings.instructions}`
+        : `${courseSettings.instructions}`;
+    } else {
+      console.warn(`No se encontró configuración para el curso: ${normalizedCurso}`);
+      systemMessage = isFirstMessage
+        ? `El nombre del usuario es ${nombre}. No se encontró configuración para el curso ${curso}. Continúa respondiendo la última pregunta del usuario.`
+        : `No se encontró configuración para el curso ${curso}. Continúa respondiendo la última pregunta del usuario.`;
     }
-    const debouncedCallback = this.debounceCallback(callback);
+  
+    // Insertar el mensaje del sistema al inicio de los mensajes
+    messages.unshift({
+      role: Role.System,
+      content: systemMessage,
+      messageType: MessageType.Normal,
+    });
+  
     this.abortController = new AbortController();
-    let endpoint = CHAT_COMPLETIONS_ENDPOINT;
-    let headers = {
+    const endpoint = CHAT_COMPLETIONS_ENDPOINT;
+    const headers = {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${OPENAI_API_KEY}`
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
     };
   
     //console.log("sendMessageStreamed called");
-    const lastMessage = messages[messages.length - 1];
-    const hasImages = lastMessage.fileDataRef && lastMessage.fileDataRef.length > 0;
-    //console.log("¿La consulta incluye imágenes?", hasImages);
   
-    // Paso 1: Asegurar delimitadores LaTeX en el contenido
-    const modifiedMessages = messages.map(message => ({
-      ...message,
-      content: this.ensureLatexDelimiters(message.content)
-    }));
+    try {
+      const mappedMessages = await this.mapChatMessagesToCompletionMessages(
+        chatSettings.model ?? DEFAULT_MODEL,
+        messages
+      );
   
-    // Paso 2: Generar los embeddings para la consulta del usuario
-    const userQuery = modifiedMessages.map(m => m.content).join(' ');
-    //console.log("pregunta", userQuery);
-    const queryEmbedding = await this.generateEmbeddings([userQuery]);
-    //console.log("Generated query embeddings:", queryEmbedding);
+      const userQuery = mappedMessages.map((m) => m.content).join(" ");
   
-    // Paso 3: Buscar en Pinecone
-    const pineconeResults = await this.searchPinecone(queryEmbedding[0]);
-    //console.log("Pinecone search results:", JSON.stringify(pineconeResults, null, 2));
-    //console.log("Consulta actual:", userQuery);
-    //console.log("Pinecone Resultados:", pineconeResults);
+      let pineconeResponse = "";
+      if (normalizedCurso === "termodinamica") {
+      //  console.log("Curso 'termodinámica' detectado. Consultando en Pinecone...");
   
-    // Paso 4: Verificar si se debe usar Pinecone o el modelo de OpenAI
-    if (pineconeResults.length > 0 && pineconeResults[0].score > 0.7) {
-      const bestMatch = pineconeResults[0].metadata.content;
-      console.log('Using knowledge base from Pinecone');
+        // Generar embeddings y buscar en Pinecone
+        const queryEmbedding = await this.generateEmbeddings([userQuery]);
+      //  console.log("Generated query embeddings:", queryEmbedding);
   
-      // Combina la respuesta de Pinecone con la pregunta original y la imagen (si existe)
-      const combinedPrompt: ChatMessagePart[] = [
-        {
-          type: 'text',
-          text: `Pregunta: ${userQuery}\n\nInformación Relevante: ${bestMatch}\n\nRespuesta Completa:`
-        }
-      ];
+        const pineconeResults = await this.searchPinecone(queryEmbedding[0]);
+       // console.log("Pinecone search results:", pineconeResults);
   
-      // Añadir la imagen al combined prompt si existe
-      if (hasImages) {
-        messages.forEach(message => {
-          if (message.fileDataRef && message.fileDataRef.length > 0) {
-            message.fileDataRef.forEach(fileRef => {
-              if (fileRef.fileData && fileRef.fileData.data) {
-                combinedPrompt.push({
-                  type: 'image_url',
-                  image_url: {
-                    url: fileRef.fileData.data
-                  }
-                });
-              }
-            });
-          }
-        });
-      }
-  
-      const requestBody: ChatCompletionRequest = {
-        model: chatSettings.model ?? DEFAULT_MODEL,
-        messages: [
-          {
-            role: Role.User,
-            content: combinedPrompt
-          }
-        ],
-        stream: true,
-      };
-  
-      //console.log('Request body with combined prompt:', JSON.stringify(requestBody, null, 2));
-  
-      let response: Response;
-      try {
-        response = await fetch(endpoint, {
-          method: "POST",
-          headers: headers,
-          body: JSON.stringify(requestBody),
-          signal: this.abortController.signal
-        });
-      } catch (error) {
-        if (error instanceof Error && error.name === 'AbortError') {
-          NotificationService.handleUnexpectedError(error, 'Stream reading was aborted.');
-        } else if (error instanceof Error) {
-          NotificationService.handleUnexpectedError(error, 'Error reading streamed response.');
+        if (pineconeResults.length > 0 && pineconeResults[0].score > 0.7) {
+        //  console.log("Usando datos de Pinecone para enriquecer la respuesta.");
+          const bestMatch = pineconeResults[0].metadata.content || "Sin contenido relevante encontrado en Pinecone.";
+          const sourceInfo = pineconeResults[0].metadata.source || "Fuente desconocida";
+          pineconeResponse = `Información obtenida de Pinecone:\n${bestMatch}\n\nFuente: ${sourceInfo}`;
         } else {
-          console.error('An unexpected error occurred');
-        }
-        return;
-      }
-  
-      if (!response.ok) {
-        const err = await response.json();
-        throw new CustomError(err.error.message, err);
-      }
-  
-      if (this.abortController.signal.aborted) {
-        console.log('Stream aborted');
-        return;
-      }
-  
-      if (response.body) {
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder("utf-8");
-        let buffer = '';
-        let partialDecodedChunk = undefined;
-        let isFirstChunk = true;
-        let accumulatedContent = '';
-        let DONE = false; // Declarar bandera para indicar el fin del stream
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-  
-            buffer += decoder.decode(value, { stream: true });
-            let chunks = buffer.split('\n\n');
-            buffer = chunks.pop() || '';
-  
-            for (let chunk of chunks) {
-              if (chunk.startsWith('data: ')) {
-                chunk = chunk.slice(6);  // Remove 'data: ' prefix
-              }
-              if (chunk.trim() === '[DONE]') {
-                DONE = true;
-                break; // Salir del for loop si se detecta el fin
-              }
-  
-              try {
-                const parsed = JSON.parse(chunk);
-                if (parsed.choices && parsed.choices[0].delta && parsed.choices[0].delta.content) {
-                  const content = parsed.choices[0].delta.content;
-                  accumulatedContent += content;
-                  if (isFirstChunk || accumulatedContent.length > 10) {
-                    callback(accumulatedContent, [], false, isFirstChunk);
-                    accumulatedContent = '';
-                    isFirstChunk = false;
-                  }
-                }
-              } catch (e) {
-                console.error('Error parsing chunk:', e);
-              }
-            }
-  
-            if (DONE) break; // Salir del while loop si se detecta el fin
-          }
-  
-          // Procesar cualquier contenido restante
-          if (accumulatedContent.length > 0) {
-            callback(accumulatedContent, [], false, false);
-          }
-  
-          // Llamar al callback con isEnd: true si aún no se ha hecho
-          if (!isEndCalled) {
-            callback('', [], true, false);
-            isEndCalled = true;
-          }
-  
-        } catch (error) {
-          if (error instanceof Error && error.name === 'AbortError') {
-          } else if (error instanceof Error) {
-            NotificationService.handleUnexpectedError(error, 'Error reading streamed response.');
-          } else {
-            console.error('An unexpected error occurred');
-          }
-          return;
+          console.log("Sin resultados relevantes en Pinecone.");
         }
       }
-    } else {
-      // Si Pinecone no tiene una respuesta adecuada, usamos OpenAI directamente
-      console.log('Usando  conocimiento base combinado');
-      const mappedMessages = await this.mapChatMessagesToCompletionMessages(chatSettings.model ?? DEFAULT_MODEL, modifiedMessages);
   
+      // Usar modelo general para generar respuesta
       const requestBody: ChatCompletionRequest = {
         model: chatSettings.model ?? DEFAULT_MODEL,
         messages: mappedMessages,
         stream: true,
       };
   
-     // console.log('Request body for model:', JSON.stringify(requestBody, null, 2));
+   //   console.log("Request body for model:", JSON.stringify(requestBody, null, 2));
   
-      let response: Response;
-      try {
-        response = await fetch(endpoint, {
-          method: "POST",
-          headers: headers,
-          body: JSON.stringify(requestBody),
-          signal: this.abortController.signal
-        });
-      } catch (error) {
-        if (error instanceof Error && error.name === 'AbortError') {
-          NotificationService.handleUnexpectedError(error, 'Stream reading was aborted.');
-        } else if (error instanceof Error) {
-          NotificationService.handleUnexpectedError(error, 'Error reading streamed response.');
-        } else {
-          console.error('An unexpected error occurred');
-        }
-        return;
-      }
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify(requestBody),
+        signal: this.abortController.signal,
+      });
   
       if (!response.ok) {
         const err = await response.json();
         throw new CustomError(err.error.message, err);
       }
   
-      if (this.abortController.signal.aborted) {
-        console.log('Stream aborted');
-        return;
-      }
-  
       if (response.body) {
         const reader = response.body.getReader();
         const decoder = new TextDecoder("utf-8");
-        let isFirstChunk = true;
-        let partialDecodedChunk = undefined;
-        let DONE = false; // Declarar bandera para indicar el fin del stream
-        try {
-          while (true) {
-            const streamChunk = await reader.read();
-            const { done, value } = streamChunk;
-            if (done) {
+        let buffer = "";
+        let DONE = false;
+        let accumulatedResponse = "";
+  
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+  
+          buffer += decoder.decode(value, { stream: true });
+          const chunks = buffer.split("\n\n");
+          buffer = chunks.pop() || "";
+  
+          for (let chunk of chunks) {
+            if (chunk.startsWith("data: ")) {
+              chunk = chunk.slice(6);
+            }
+  
+            if (chunk.trim() === "[DONE]") {
+              DONE = true;
               break;
             }
   
-            let decodedChunk = decoder.decode(value);
-            if (partialDecodedChunk) {
-              decodedChunk = "data: " + partialDecodedChunk + decodedChunk;
-              partialDecodedChunk = undefined;
-            }
-            const rawData = decodedChunk.split("data: ").filter(Boolean);
-            const chunks: CompletionChunk[] = rawData.map((chunk, index) => {
-              partialDecodedChunk = undefined;
-              chunk = chunk.trim();
-              if (chunk.length == 0) {
-                return;
+            try {
+              const parsed = JSON.parse(chunk);
+              if (parsed.choices && parsed.choices[0].delta && parsed.choices[0].delta.content) {
+                const content = parsed.choices[0].delta.content;
+                accumulatedResponse += content;
+                callback(content, [], false, isFirstMessage);
               }
-              if (chunk === '[DONE]') {
-                DONE = true;
-                return;
-              }
-              let o;
-              try {
-                o = JSON.parse(chunk);
-              } catch (err) {
-                if (index === rawData.length - 1) {
-                  partialDecodedChunk = chunk;
-                } else if (err instanceof Error) {
-                  console.error(err.message);
-                }
-              }
-              return o;
-            }).filter(Boolean);
-  
-            let accumulatedContent = '';
-            chunks.forEach(chunk => {
-              chunk.choices.forEach(choice => {
-                if (choice.delta && choice.delta.content) {
-                  const content = choice.delta.content;
-                  try {
-                    accumulatedContent += content;
-                  } catch (err) {
-                    if (err instanceof Error) {
-                      console.error(err.message);
-                    }
-                    console.log('error en cliente. continuando...')
-                  }
-                } else if (choice?.finish_reason === 'stop') {
-                }
-              });
-            });
-            debouncedCallback(accumulatedContent);
-  
-            if (DONE) {
-              break; // Salir del while loop si se detecta el fin
+            } catch (e) {
+              console.error("Error parsing chunk:", e);
             }
           }
   
-          // Llamar al callback con isEnd: true si aún no se ha hecho
-          if (!isEndCalled) {
-            callback('', [], true, false);
-            isEndCalled = true;
-          }
+          if (DONE) break;
+        }
   
-        } catch (error) {
-          if (error instanceof Error && error.name === 'AbortError') {
-          } else if (error instanceof Error) {
-            NotificationService.handleUnexpectedError(error, 'Error reading streamed response.');
-          } else {
-            console.error('An unexpected error occurred');
-          }
-          return;
+        if (!isEndCalled) {
+          const finalResponse = pineconeResponse
+            ? `${accumulatedResponse}\n\n${pineconeResponse}`
+            : accumulatedResponse;
+  
+          callback(finalResponse, [], true, false);
+          isEndCalled = true;
         }
       }
+    } catch (error) {
+      console.error("Error al procesar OpenAI:", error);
     }
   }
   
+  
+  
+  
+  // Función auxiliar para procesar el stream de OpenAI
+  // Función auxiliar para procesar el stream de OpenAI
+// Función auxiliar para procesar el stream de OpenAI
+// Función auxiliar para procesar el stream de OpenAI
+static async processOpenAIStream(
+  endpoint: string,
+  headers: any,
+  requestBody: ChatCompletionRequest,
+  callback: (content: string, fileDataRef?: FileDataRef[], isEnd?: boolean, isFirst?: boolean) => void
+) {
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: headers,
+      body: JSON.stringify(requestBody),
+      signal: this.abortController.signal,
+    });
+
+    if (!response.ok) {
+      const errorResponse = await response.json();
+      throw new Error(`Error en el stream: ${errorResponse.error.message}`);
+    }
+
+    if (!response.body) {
+      throw new Error("No se recibió el cuerpo de la respuesta.");
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let buffer = "";
+    let accumulatedContent = "";
+    let isEndCalled = false;
+    let isFirstChunk = true;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n\n");
+      buffer = lines.pop() || ""; // Retener la última línea incompleta
+
+      for (const line of lines) {
+        if (line.trim() === "data: [DONE]") {
+          if (!isEndCalled) {
+            callback(accumulatedContent, [], true, false);
+            isEndCalled = true;
+          }
+          return;
+        }
+
+        if (line.startsWith("data: ")) {
+          try {
+            const jsonLine = line.slice(6).trim(); // Remover "data: "
+            const parsed = JSON.parse(jsonLine);
+
+            if (parsed.choices && parsed.choices[0]?.delta?.content) {
+              const content = parsed.choices[0].delta.content;
+              accumulatedContent += content;
+
+              // Llamar al callback en cada fragmento recibido
+              callback(accumulatedContent, [], false, isFirstChunk);
+              isFirstChunk = false;
+            }
+          } catch (error) {
+            console.error("Error procesando fragmento JSON:", error, line);
+          }
+        }
+      }
+    }
+
+    // Procesar cualquier contenido acumulado restante
+    if (!isEndCalled) {
+      callback(accumulatedContent, [], true, false);
+    }
+  } catch (error) {
+    console.error("Error durante el procesamiento del stream:", error);
+  }
+}
+
+
+
+
   static cancelStream = (): void => {
     if (this.abortController) {
       this.abortController.abort();
