@@ -204,7 +204,7 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
           setLoading(false);
           addMessage(Role.Assistant, MessageType.Error, message, []);
         } else {
-          NotificationService.handleUnexpectedError(err, 'Failed to send message to  Asistente Industrias.');
+       //   NotificationService.handleUnexpectedError(err, 'Failed to send message to  Asistente Industrias.');
         }
       })
       .finally(() => {
@@ -430,7 +430,7 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
               });
           } else {
             const errorMessage = 'Conversation ' + location.pathname + ' not found';
-            NotificationService.handleError(errorMessage, CONVERSATION_NOT_FOUND);
+            //NotificationService.handleError(errorMessage, CONVERSATION_NOT_FOUND);
             navigate('/');
             setLoading(false);
           }
@@ -588,7 +588,7 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
           setLoading(false);
           addMessage(Role.Assistant, MessageType.Error, message, []);
         } else {
-          NotificationService.handleUnexpectedError(err, 'Failed to send message to OpenAI.');
+       //   NotificationService.handleUnexpectedError(err, 'Failed to send message .');
         }
       })
       .finally(() => {
