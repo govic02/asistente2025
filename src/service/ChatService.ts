@@ -281,40 +281,75 @@ export class ChatService {
     isFirstMessage: boolean
   ): Promise<any> {
     let isEndCalled = false;
-   // console.log("Nombre recibido en sendMessageStreamed:", nombre);
-   // console.log("Curso recibido en sendMessageStreamed:", curso);
+  
+    // Claves para la caché
+    const cachedNombreKey = "cached_user_name";
+    const cachedCursoKey = "cached_course_name";
+  
+    // Manejar el nombre del usuario
+    let finalNombre = nombre;
+    if (nombre) {
+      // Si llega un nombre nuevo, actualizar la caché
+      finalNombre = nombre.trim();
+      localStorage.setItem(cachedNombreKey, finalNombre);
+    } else {
+      // Si no hay un nombre nuevo, usar el de la caché
+      const cachedNombre = localStorage.getItem(cachedNombreKey);
+      if (cachedNombre) {
+        finalNombre = cachedNombre.trim();
+      }
+    }
+  
+    console.log("Nombre final usado:", finalNombre);
+  
+    // Manejar el curso
+    let finalCurso = curso;
+    if (curso) {
+      // Si llega un curso nuevo, actualizar la caché
+      finalCurso = curso.trim();
+      localStorage.setItem(cachedCursoKey, finalCurso);
+    } else {
+      // Si no hay un curso nuevo, usar el de la caché
+      const cachedCurso = localStorage.getItem(cachedCursoKey);
+      if (cachedCurso) {
+        finalCurso = cachedCurso.trim();
+      }
+    }
+  
+    console.log("Curso final usado:", finalCurso);
   
     // Normalizar el nombre del curso
     const normalizeCursoName = (cursoName: string | null): string | null => {
       if (!cursoName) return null;
       return decodeURIComponent(cursoName)
         .trim()
+        .replace(/^Asistente Virtual\s*/i, "")
         .replace(/%/g, "")
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
         .toLowerCase();
     };
   
-    const normalizedCurso = normalizeCursoName(curso);
-  //  console.log("Curso normalizado:", normalizedCurso);
+    const normalizedCurso = normalizeCursoName(finalCurso);
+    console.log("Curso normalizado:", normalizedCurso);
   
     // Buscar la configuración del curso
     const courseSettings = chatSettingsData.find((setting: any) =>
       normalizeCursoName(setting.name) === normalizedCurso
     );
-   // console.log("Configuración del curso encontrada:", courseSettings);
+    console.log("Configuración del curso encontrada:", courseSettings);
   
     let systemMessage: string;
   
     if (courseSettings) {
       systemMessage = isFirstMessage
-        ? `El nombre del usuario es ${nombre}. Este es el asistente de la asignatura "${courseSettings.name}". ${courseSettings.instructions}`
+        ? `El nombre del usuario es ${finalNombre}, siempre saluda por su nombre y en los mensajes refiérete al usuario usando su nombre. Este es el asistente de la asignatura "${courseSettings.name}". ${courseSettings.instructions}`
         : `${courseSettings.instructions}`;
     } else {
       console.warn(`No se encontró configuración para el curso: ${normalizedCurso}`);
       systemMessage = isFirstMessage
-        ? `El nombre del usuario es ${nombre}. No se encontró configuración para el curso ${curso}. Continúa respondiendo la última pregunta del usuario.`
-        : `No se encontró configuración para el curso ${curso}. Continúa respondiendo la última pregunta del usuario.`;
+        ? `El nombre del usuario es ${finalNombre}. Siempre saluda por su nombre en cada mensaje. No se encontró configuración para el curso ${finalCurso}. Continúa respondiendo la última pregunta del usuario y refiérete siempre a él por su nombre ${finalNombre}.`
+        : `No se encontró configuración para el curso ${finalCurso}. Continúa respondiendo la última pregunta del usuario.`;
     }
   
     // Insertar el mensaje del sistema al inicio de los mensajes
@@ -331,8 +366,6 @@ export class ChatService {
       Authorization: `Bearer ${OPENAI_API_KEY}`,
     };
   
-    //console.log("sendMessageStreamed called");
-  
     try {
       const mappedMessages = await this.mapChatMessagesToCompletionMessages(
         chatSettings.model ?? DEFAULT_MODEL,
@@ -343,17 +376,15 @@ export class ChatService {
   
       let pineconeResponse = "";
       if (normalizedCurso === "termodinamica") {
-      //  console.log("Curso 'termodinámica' detectado. Consultando en Pinecone...");
+        console.log("Curso 'termodinámica' detectado. Consultando en Pinecone...");
   
-        // Generar embeddings y buscar en Pinecone
         const queryEmbedding = await this.generateEmbeddings([userQuery]);
-      //  console.log("Generated query embeddings:", queryEmbedding);
+        console.log("Generated query embeddings:", queryEmbedding);
   
         const pineconeResults = await this.searchPinecone(queryEmbedding[0]);
-       // console.log("Pinecone search results:", pineconeResults);
+        console.log("Pinecone search results:", pineconeResults);
   
         if (pineconeResults.length > 0 && pineconeResults[0].score > 0.7) {
-        //  console.log("Usando datos de Pinecone para enriquecer la respuesta.");
           const bestMatch = pineconeResults[0].metadata.content || "Sin contenido relevante encontrado en Pinecone.";
           const sourceInfo = pineconeResults[0].metadata.source || "Fuente desconocida";
           pineconeResponse = `Información obtenida de Pinecone:\n${bestMatch}\n\nFuente: ${sourceInfo}`;
@@ -362,14 +393,11 @@ export class ChatService {
         }
       }
   
-      // Usar modelo general para generar respuesta
       const requestBody: ChatCompletionRequest = {
         model: chatSettings.model ?? DEFAULT_MODEL,
         messages: mappedMessages,
         stream: true,
       };
-  
-   //   console.log("Request body for model:", JSON.stringify(requestBody, null, 2));
   
       const response = await fetch(endpoint, {
         method: "POST",
@@ -387,7 +415,6 @@ export class ChatService {
         const reader = response.body.getReader();
         const decoder = new TextDecoder("utf-8");
         let buffer = "";
-        let DONE = false;
         let accumulatedResponse = "";
   
         while (true) {
@@ -404,7 +431,6 @@ export class ChatService {
             }
   
             if (chunk.trim() === "[DONE]") {
-              DONE = true;
               break;
             }
   
@@ -419,8 +445,6 @@ export class ChatService {
               console.error("Error parsing chunk:", e);
             }
           }
-  
-          if (DONE) break;
         }
   
         if (!isEndCalled) {
@@ -436,6 +460,8 @@ export class ChatService {
       console.error("Error al procesar OpenAI:", error);
     }
   }
+  
+  
   
   
   
