@@ -9,26 +9,45 @@ import { ToastContainer } from "react-toastify";
 import ExploreCustomChats from "./components/ExploreCustomChats";
 import CustomChatEditor from './components/CustomChatEditor';
 
-const withNombreCapture = (WrappedComponent) => {
+const withNombreCursoCapture = (WrappedComponent) => {
   return (props) => {
     const location = useLocation();
     const [nombre, setNombre] = useState<string | null>(null);
+    const [curso, setCurso] = useState<string | null>(null);
 
     useEffect(() => {
+      console.log("URL de búsqueda completa:", location.search);
       const searchParams = new URLSearchParams(location.search);
       const nombreParam = searchParams.get('nombre');
-      if (nombreParam) {
+      const cursoParam = searchParams.get('curso');
+
+      // Actualiza solo si hay cambios
+      if (nombreParam && nombreParam !== nombre) {
         setNombre(nombreParam);
         console.log("Nombre capturado de la URL:", nombreParam);
-        // Opcional: Remover el parámetro 'nombre' de la URL sin recargar la página
-        searchParams.delete('nombre');
-        window.history.replaceState({}, '', `${location.pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`);
       }
-    }, [location]);
 
-    return <WrappedComponent {...props} nombre={nombre} />;
+      if (cursoParam && cursoParam !== curso) {
+        setCurso(cursoParam);
+        console.log("Curso capturado de la URL:", cursoParam);
+      }
+
+      if (nombreParam || cursoParam) {
+        const updatedSearchParams = new URLSearchParams(location.search);
+        updatedSearchParams.delete('nombre');
+        updatedSearchParams.delete('curso');
+        const newUrl = `${location.pathname}${updatedSearchParams.toString() ? `?${updatedSearchParams.toString()}` : ''}`;
+        if (location.search !== newUrl) {
+          window.history.replaceState({}, '', newUrl);
+        }
+      }
+    }, [location, nombre, curso]);
+
+    return <WrappedComponent {...props} nombre={nombre} curso={curso} />;
   };
 };
+
+
 
 const App = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -42,6 +61,7 @@ const App = () => {
     isSidebarCollapsed: boolean;
     toggleSidebarCollapse: () => void;
     nombre?: string | null;
+    curso?: string | null;
   }
 
   const MainPageWithProps: React.FC<Partial<MainPageProps>> = (props) => (
@@ -53,13 +73,13 @@ const App = () => {
     />
   );
 
-  const MainPageWithNombre = withNombreCapture(MainPageWithProps);
+  const MainPageWithNombreCurso = withNombreCursoCapture(MainPageWithProps);
 
   return (
     <BrowserRouter>
       <I18nextProvider i18n={i18n}>
         <div className="App dark:bg-gray-900 dark:text-gray-100">
-          <ToastContainer/>
+          <ToastContainer />
           <div className="flex overflow-hidden w-full h-full relative z-0">
             <Sidebar
               className="sidebar-container flex-shrink-0"
@@ -68,14 +88,14 @@ const App = () => {
             />
             <div className="flex-grow h-full overflow-hidden">
               <Routes>
-                <Route path="/" element={<MainPageWithNombre/>}/>
-                <Route path="/c/:id" element={<MainPageWithNombre/>}/>
-                <Route path="/explore" element={<ExploreCustomChats/>}/>
-                <Route path="/g/:gid" element={<MainPageWithNombre/>}/>
-                <Route path="/g/:gid/c/:id" element={<MainPageWithNombre/>}/>
-                <Route path="/custom/editor" element={<CustomChatEditor/>}/>
-                <Route path="/custom/editor/:id" element={<CustomChatEditor/>}/>
-                <Route path="*" element={<Navigate to="/" replace/>}/>
+                <Route path="/" element={<MainPageWithNombreCurso />} />
+                <Route path="/c/:id" element={<MainPageWithNombreCurso />} />
+                <Route path="/explore" element={<ExploreCustomChats />} />
+                <Route path="/g/:gid" element={<MainPageWithNombreCurso />} />
+                <Route path="/g/:gid/c/:id" element={<MainPageWithNombreCurso />} />
+                <Route path="/custom/editor" element={<CustomChatEditor />} />
+                <Route path="/custom/editor/:id" element={<CustomChatEditor />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </div>
           </div>
