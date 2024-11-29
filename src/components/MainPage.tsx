@@ -71,7 +71,7 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
   const [responseComplete, setResponseComplete] = useState(false);
   const firstChunkRef = useRef('');
   const [lastMessageId, setLastMessageId] = useState<number | null>(null);
-
+  const [cleanCurso, setCleanCurso] = useState<string | null>(null); 
   useEffect(() => {
     if (nombre) {
       console.log("Nombre recibido en MainPage:", nombre);
@@ -102,6 +102,18 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
       chunksRef.current.push(e.data);
     }
   };
+  useEffect(() => {
+    if (curso) {
+      // Modificar la variable curso
+      const modifiedCurso = curso.trimStart().startsWith("Asistente Virtual")
+        ? curso.replace(/^\s*Asistente Virtual\s*/, "")
+        : curso;
+
+      setCleanCurso(modifiedCurso); // Actualizar el estado con el curso limpio
+      console.log("Curso recibido y procesado en MainPage:", modifiedCurso);
+      curso =modifiedCurso;
+    }
+  }, [curso]);
   const [transcription, setTranscription] = useState<string>('');
 
   const handleStop = () => {

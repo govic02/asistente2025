@@ -9,7 +9,11 @@ import ffmpegPath from 'ffmpeg-static'; // Importa la ruta de ffmpeg desde ffmpe
 import FormData from 'form-data';
 
 const app = express();
+<<<<<<< HEAD
 const PORT = 4001;
+=======
+const PORT = 5000;
+>>>>>>> parent of e2ea606 (proxy,js & ennv)
 
 app.use(cors());
 app.use(express.json());
@@ -93,7 +97,7 @@ app.post('/transcribe', upload.single('file'), async (req, res) => {
         const whisperResponse = await axios.post('https://api.openai.com/v1/audio/transcriptions', formData, {
           headers: {
             ...formData.getHeaders(),
-            'Authorization': `Bearer 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`,
+            'Authorization': `Bearer `,
           },
           maxBodyLength: Infinity,
         });
@@ -127,7 +131,7 @@ app.post('/pinecone-api', async (req, res) => {
       {
         headers: {
           'Content-Type': 'application/json',
-          'Api-Key': '7e6d5432-cd13-475b-92e4-276566c73c07',
+          'Api-Key': '',
         },
       }
     );

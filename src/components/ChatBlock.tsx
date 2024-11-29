@@ -5,7 +5,8 @@ import CopyButton, { CopyButtonMode } from './CopyButton';
 import { ChatMessage, MessageType, Role } from '../models/ChatCompletion';
 import UserContentBlock from './UserContentBlock';
 import TextToSpeechButton from './TextToSpeechButton';
-import '@fontsource/dancing-script';
+import '@fontsource/roboto';
+
 
 interface Props {
   block: ChatMessage;
@@ -197,13 +198,14 @@ const ChatBlock: React.FC<Props> = ({
                 ...errorStyles,
                 fontFamily:
                   block.role === Role.Assistant ? 'Dancing Script, cursive' : 'inherit',
+                  fontWeight: 'normal',
                 color: block.role === Role.User ? 'white' : 'black',
-                fontSize: block.role === Role.Assistant ? '240%' : 'inherit',
+                fontSize: block.role === Role.Assistant ? '180%' : 'inherit',
                 backgroundColor: block.role === Role.Assistant ? 'white' : 'inherit',
                 padding: block.role === Role.Assistant ? '10px' : 'inherit',
                 borderRadius: block.role === Role.Assistant ? '10px' : 'inherit',
-                border: block.role === Role.Assistant ? '3px solid black' : 'inherit',
-                lineHeight: block.role === Role.Assistant ? '1.8' : 'inherit',
+                border: block.role === Role.Assistant ? '2px solid black' : 'inherit',
+                lineHeight: block.role === Role.Assistant ? '1.5' : 'inherit',
               }}
             >
               <div className="min-h-[20px] flex flex-col items-start gap-4">

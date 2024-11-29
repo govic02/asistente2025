@@ -72,7 +72,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isAudioPlaying }) => {
   ref={videoRef}
   width="180"
   height="250"
-  controls
+ 
   style={{
     borderRadius: '30px',
     overflow: 'hidden',
