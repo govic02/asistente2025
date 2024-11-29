@@ -157,8 +157,16 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
         console.log("Transcripción recibida:", result.transcription);
 
         const transcriptionText = result.transcription.split('\n').slice(1).join(' ');
-
-        addMessage(Role.User, MessageType.Normal, transcriptionText, [], handleTranscriptionMessage);
+        const cleanTranscription = result.transcription
+        .split('\n') // Dividir por líneas
+        .filter(
+          (line) =>
+            !line.startsWith('WEBVTT') && // Excluir líneas que contienen 'WEBVTT'
+            !/^\d{2}:\d{2}:\d{2}\.\d{3} --> \d{2}:\d{2}:\d{2}\.\d{3}$/.test(line) // Excluir líneas con marcas de tiempo
+        )
+        .join(' ') // Reunir el contenido filtrado en un único string
+        .trim(); // Eliminar espacios adicionales
+        addMessage(Role.User, MessageType.Normal, cleanTranscription, [], handleTranscriptionMessage);
       } else {
         console.log("La respuesta no contiene una transcripción");
       }
