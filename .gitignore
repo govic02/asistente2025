@@ -28,3 +28,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 src/tailwind.css
+src/service/ChatService copy.ts
+src/service/ChatService copy 2.ts
+.env

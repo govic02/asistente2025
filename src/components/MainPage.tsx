@@ -77,19 +77,6 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
       console.log("Nombre recibido en MainPage:", nombre);
     }
   }, [nombre]);
-
-  useEffect(() => {
-    if (curso) {
-      // Modificar la variable curso
-      const modifiedCurso = curso.trimStart().startsWith("Asistente Virtual")
-        ? curso.replace(/^\s*Asistente Virtual\s*/, "")
-        : curso;
-
-      setCleanCurso(modifiedCurso); // Actualizar el estado con el curso limpio
-      console.log("Curso recibido y procesado en MainPage:", modifiedCurso);
-      curso =modifiedCurso;
-    }
-  }, [curso]);
   const handleAudioPlay = (isPlaying: boolean) => {
     setIsAudioPlaying(isPlaying);
   };
@@ -115,7 +102,18 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
       chunksRef.current.push(e.data);
     }
   };
-  
+  useEffect(() => {
+    if (curso) {
+      // Modificar la variable curso
+      const modifiedCurso = curso.trimStart().startsWith("Asistente Virtual")
+        ? curso.replace(/^\s*Asistente Virtual\s*/, "")
+        : curso;
+
+      setCleanCurso(modifiedCurso); // Actualizar el estado con el curso limpio
+      console.log("Curso recibido y procesado en MainPage:", modifiedCurso);
+      curso =modifiedCurso;
+    }
+  }, [curso]);
   const [transcription, setTranscription] = useState<string>('');
 
   const handleStop = () => {
@@ -169,6 +167,11 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
         .join(' ') // Reunir el contenido filtrado en un único string
         .trim(); // Eliminar espacios adicionales
         addMessage(Role.User, MessageType.Normal, cleanTranscription, [], handleTranscriptionMessage);
+        if (updatedMessages) {
+          sendMessage(updatedMessages); // Asegúrate de pasar los mensajes actualizados
+        } else {
+          console.error("No se pudieron actualizar los mensajes");
+        }
       } else {
         console.log("La respuesta no contiene una transcripción");
       }
