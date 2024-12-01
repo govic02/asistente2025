@@ -39,9 +39,9 @@ interface MainPageProps {
   isSidebarCollapsed: true;
   toggleSidebarCollapse: () => void;
   nombre?: string | null;
-  curso?: string | null; // Nuevo prop para el curso
+  curso?: string | null | undefined; // Nuevo prop para el curso
 }
-const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, toggleSidebarCollapse , nombre,curso}) => {
+const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, toggleSidebarCollapse , nombre,curso = ""}) => {
   const { userSettings } = useContext(UserContext);
   const { t } = useTranslation();
   const [chatSettings, setChatSettings] = useState<ChatSettings | undefined>(undefined);
@@ -103,15 +103,15 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
     }
   };
   useEffect(() => {
-    if (curso) {
-      // Modificar la variable curso
-      const modifiedCurso = curso.trimStart().startsWith("Asistente Virtual")
-        ? curso.replace(/^\s*Asistente Virtual\s*/, "")
-        : curso;
-
+    const safeCurso = typeof curso === "string" ? curso : String(curso ?? "");
+  
+    if (safeCurso.trimStart().startsWith("Asistente Virtual")) {
+      const modifiedCurso = safeCurso.replace(/^\s*Asistente Virtual\s*/, "");
       setCleanCurso(modifiedCurso); // Actualizar el estado con el curso limpio
       console.log("Curso recibido y procesado en MainPage:", modifiedCurso);
-      curso =modifiedCurso;
+    } else {
+      setCleanCurso(safeCurso); // Asignar el valor directo si no necesita modificaciones
+      console.log("Curso recibido:", safeCurso);
     }
   }, [curso]);
   const [transcription, setTranscription] = useState<string>('');
@@ -167,11 +167,7 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
         .join(' ') // Reunir el contenido filtrado en un único string
         .trim(); // Eliminar espacios adicionales
         addMessage(Role.User, MessageType.Normal, cleanTranscription, [], handleTranscriptionMessage);
-        if (updatedMessages) {
-      sendMessage(updatedMessages); // Asegúrate de pasar los mensajes actualizados
-    } else {
-      console.error("No se pudieron actualizar los mensajes");
-    }
+        sendMessage(updatedMessages);
       } else {
         console.log("La respuesta no contiene una transcripción");
       }
@@ -204,7 +200,7 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
           setLoading(false);
           addMessage(Role.Assistant, MessageType.Error, message, []);
         } else {
-         NotificationService.handleUnexpectedError(err, 'Vuelve a intentarlo  Asistente Industrias.');
+        // NotificationService.handleUnexpectedError(err, 'Vuelve a intentarlo  Asistente Industrias.');
         }
       })
       .finally(() => {
@@ -352,7 +348,7 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
     } catch (error) {
       console.error('Failed to fetch model:', error);
       if (error instanceof Error) {
-        NotificationService.handleUnexpectedError(error, '.');
+     //   NotificationService.handleUnexpectedError(error, '.');
       }
       return null;
     }
@@ -588,7 +584,7 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
           setLoading(false);
           addMessage(Role.Assistant, MessageType.Error, message, []);
         } else {
-          NotificationService.handleUnexpectedError(err, 'Vuelve a intentarlo.');
+    //      NotificationService.handleUnexpectedError(err, 'Vuelve a intentarlo.');
         }
       })
       .finally(() => {
