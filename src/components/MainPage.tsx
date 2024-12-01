@@ -190,7 +190,8 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
 
     let effectiveSettings = getEffectiveChatSettings();
 
-    ChatService.sendMessageStreamed(effectiveSettings, messages, handleStreamedResponse,nombre,isFirstMessage)
+    ChatService.sendMessageStreamed(effectiveSettings, messages, handleStreamedResponse, nombre, curso, isFirstMessage)
+
       .then((response: ChatCompletion) => {
         // nop
       })
