@@ -168,10 +168,10 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
         .trim(); // Eliminar espacios adicionales
         addMessage(Role.User, MessageType.Normal, cleanTranscription, [], handleTranscriptionMessage);
         if (updatedMessages) {
-          sendMessage(updatedMessages); // Asegúrate de pasar los mensajes actualizados
-        } else {
-          console.error("No se pudieron actualizar los mensajes");
-        }
+      sendMessage(updatedMessages); // Asegúrate de pasar los mensajes actualizados
+    } else {
+      console.error("No se pudieron actualizar los mensajes");
+    }
       } else {
         console.log("La respuesta no contiene una transcripción");
       }
@@ -352,7 +352,7 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
     } catch (error) {
       console.error('Failed to fetch model:', error);
       if (error instanceof Error) {
-        NotificationService.handleUnexpectedError(error, 'Failed to fetch model.');
+       // NotificationService.handleUnexpectedError(error, 'Failed to fetch model.');
       }
       return null;
     }
@@ -430,7 +430,7 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
               });
           } else {
             const errorMessage = 'Conversation ' + location.pathname + ' not found';
-            //NotificationService.handleError(errorMessage, CONVERSATION_NOT_FOUND);
+          //  NotificationService.handleError(errorMessage, CONVERSATION_NOT_FOUND);
             navigate('/');
             setLoading(false);
           }
@@ -588,7 +588,7 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
           setLoading(false);
           addMessage(Role.Assistant, MessageType.Error, message, []);
         } else {
-       //   NotificationService.handleUnexpectedError(err, 'Failed to send message .');
+        //  NotificationService.handleUnexpectedError(err, 'Failed to send message to OpenAI.');
         }
       })
       .finally(() => {
