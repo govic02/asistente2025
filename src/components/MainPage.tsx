@@ -204,7 +204,7 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
           setLoading(false);
           addMessage(Role.Assistant, MessageType.Error, message, []);
         } else {
-       //   NotificationService.handleUnexpectedError(err, 'Failed to send message to  Asistente Industrias.');
+         NotificationService.handleUnexpectedError(err, 'Vuelve a intentarlo  Asistente Industrias.');
         }
       })
       .finally(() => {
@@ -352,7 +352,7 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
     } catch (error) {
       console.error('Failed to fetch model:', error);
       if (error instanceof Error) {
-       // NotificationService.handleUnexpectedError(error, 'Failed to fetch model.');
+        NotificationService.handleUnexpectedError(error, '.');
       }
       return null;
     }
@@ -588,7 +588,7 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
           setLoading(false);
           addMessage(Role.Assistant, MessageType.Error, message, []);
         } else {
-        //  NotificationService.handleUnexpectedError(err, 'Failed to send message to OpenAI.');
+          NotificationService.handleUnexpectedError(err, 'Vuelve a intentarlo.');
         }
       })
       .finally(() => {
