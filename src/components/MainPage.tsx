@@ -117,9 +117,10 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
       if (!initialMessageSent) {
         // Introducir un retraso de 2 segundos antes de enviar el mensaje inicial
         const timeoutId = setTimeout(() => {
+          console.log("Llamo a inicios de saludo:", safeCurso);
           sendInitialMessage();
           setInitialMessageSent(true);
-        }, 2000); // 2000 milisegundos = 2 segundos
+        }, 4000); // 2000 milisegundos = 2 segundos
   
         // Limpiar el timeout si el componente se desmonta o las dependencias cambian
         return () => clearTimeout(timeoutId);
