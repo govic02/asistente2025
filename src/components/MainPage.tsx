@@ -112,7 +112,7 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
       console.log("Curso recibido y procesado en MainPage:", modifiedCurso);
     } else {
       setCleanCurso(safeCurso); // Asignar el valor directo si no necesita modificaciones
-      console.log("Curso recibido:", safeCurso);
+      console.log("Curso recibido2:", safeCurso);
      
       if (!initialMessageSent) {
         // Introducir un retraso de 2 segundos antes de enviar el mensaje inicial
