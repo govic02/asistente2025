@@ -5,7 +5,7 @@ import CopyButton, { CopyButtonMode } from './CopyButton';
 import { ChatMessage, MessageType, Role } from '../models/ChatCompletion';
 import UserContentBlock from './UserContentBlock';
 import TextToSpeechButton from './TextToSpeechButton';
-import '@fontsource/roboto';
+
 
 
 interface Props {
@@ -196,8 +196,7 @@ const ChatBlock: React.FC<Props> = ({
               className={`flex flex-grow flex-col gap-3 ${className || ''}`}
               style={{
                 ...errorStyles,
-                fontFamily:
-                  block.role === Role.Assistant ? 'Dancing Script, cursive' : 'inherit',
+                fontFamily: ['Opens Sans', 'cursive', 'sans-serif'].join(', '),
                   fontWeight: 'normal',
                 color: block.role === Role.User ? 'white' : 'black',
                 fontSize: block.role === Role.Assistant ? '180%' : 'inherit',

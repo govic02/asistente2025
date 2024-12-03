@@ -72,6 +72,7 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
   const firstChunkRef = useRef('');
   const [lastMessageId, setLastMessageId] = useState<number | null>(null);
   const [cleanCurso, setCleanCurso] = useState<string | null>(null); 
+  const [initialMessageSent, setInitialMessageSent] = useState(false);
   useEffect(() => {
     if (nombre) {
       console.log("Nombre recibido en MainPage:", nombre);
@@ -80,7 +81,7 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
   const handleAudioPlay = (isPlaying: boolean) => {
     setIsAudioPlaying(isPlaying);
   };
-
+ 
   const handleStream = (stream: MediaStream) => {
     try {
       mediaRef.current = new MediaRecorder(stream, {
@@ -112,10 +113,44 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
     } else {
       setCleanCurso(safeCurso); // Asignar el valor directo si no necesita modificaciones
       console.log("Curso recibido:", safeCurso);
+     
+      if (!initialMessageSent) {
+        // Introducir un retraso de 2 segundos antes de enviar el mensaje inicial
+        const timeoutId = setTimeout(() => {
+          sendInitialMessage();
+          setInitialMessageSent(true);
+        }, 2000); // 2000 milisegundos = 2 segundos
+  
+        // Limpiar el timeout si el componente se desmonta o las dependencias cambian
+        return () => clearTimeout(timeoutId);
+      }
+     
     }
   }, [curso]);
   const [transcription, setTranscription] = useState<string>('');
-
+  const sendInitialMessage = () => {
+    const initialMessage = "Hola";
+  
+    // Iniciar una nueva conversación si no existe
+    if (!conversation) {
+      startConversation(initialMessage, []);
+    }
+  
+    // Crear el mensaje inicial
+    const newMessage: ChatMessage = {
+      id: messages.length + 1,
+      role: Role.User,
+      messageType: MessageType.Normal,
+      content: initialMessage,
+      fileDataRef: [],
+    };
+  
+    // Actualizar el estado de los mensajes
+    setMessages((prevMessages: ChatMessage[]) => [...prevMessages, newMessage]);
+  
+    // Enviar el mensaje
+    sendMessage([newMessage]);
+  };
   const handleStop = () => {
     const blob = new Blob(chunksRef.current, { type: 'audio/webm;codecs=opus' });
     const name = `file${Date.now()}` + Math.round(Math.random() * 100000);
@@ -623,7 +658,15 @@ const MainPage: React.FC<MainPageProps> = ({ className, isSidebarCollapsed, togg
 
       if (prevMessages.length === 0) {
         console.error('prevMessages should not be empty in handleStreamedResponse.');
-        return [];
+        const newAssistantMessage: ChatMessage = {
+          id: 1,
+          role: Role.Assistant,
+          messageType: MessageType.Normal,
+          content: content,
+          fileDataRef: fileDataRef,
+          isNew: true,
+        };
+        return [newAssistantMessage];
       }
 
       const lastMessage = prevMessages[prevMessages.length - 1];

@@ -192,7 +192,7 @@ export class ChatService {
             content: `${bestMatch}\n\n(used knowledge base from Pinecone)`,
         };
     } else {
-      //  console.log('Using general knowledge base');  // Log para verificar que se está usando el modelo de OpenAI
+      //  console.log('Using general knowledge base');  // Log para verificar 
         const mappedMessages = await this.mapChatMessagesToCompletionMessages(modelId, messages);
 
         const requestBody: ChatCompletionRequest = {
@@ -287,16 +287,18 @@ export class ChatService {
     const cachedCursoKey = "cached_course_name";
   
     // Manejar el nombre del usuario
-    let finalNombre = nombre;
-    if (nombre) {
+    let finalNombre = nombre?.trim() || "Usuario"; 
+    if (nombre !== null && nombre !== undefined) {
       // Si llega un nombre nuevo, actualizar la caché
       finalNombre = nombre.trim();
       localStorage.setItem(cachedNombreKey, finalNombre);
     } else {
       // Si no hay un nombre nuevo, usar el de la caché
       const cachedNombre = localStorage.getItem(cachedNombreKey);
-      if (cachedNombre) {
+      if (cachedNombre !== null && cachedNombre !== undefined) {
         finalNombre = cachedNombre.trim();
+      } else {
+        finalNombre = "Usuario"; // Valor por defecto si no hay nombre en caché
       }
     }
   
@@ -304,15 +306,15 @@ export class ChatService {
   
     // Manejar el curso
     let finalCurso = curso;
-    if (curso) {
-      // Si llega un curso nuevo, actualizar la caché
+    if (curso !== null && curso !== undefined) {
       finalCurso = curso.trim();
       localStorage.setItem(cachedCursoKey, finalCurso);
     } else {
-      // Si no hay un curso nuevo, usar el de la caché
       const cachedCurso = localStorage.getItem(cachedCursoKey);
-      if (cachedCurso) {
+      if (cachedCurso !== null && cachedCurso !== undefined) {
         finalCurso = cachedCurso.trim();
+      } else {
+        finalCurso = ""; // Valor por defecto si no hay curso en caché
       }
     }
   
@@ -457,7 +459,7 @@ export class ChatService {
         }
       }
     } catch (error) {
-      console.error("Error al procesar OpenAI:", error);
+      console.error("Error al procesar :", error);
     }
   }
   
@@ -466,10 +468,7 @@ export class ChatService {
   
   
   
-  // Función auxiliar para procesar el stream de OpenAI
-  // Función auxiliar para procesar el stream de OpenAI
-// Función auxiliar para procesar el stream de OpenAI
-// Función auxiliar para procesar el stream de OpenAI
+
 static async processOpenAIStream(
   endpoint: string,
   headers: any,
